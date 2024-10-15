@@ -43,10 +43,12 @@ app.get('/api/ip_please', function (req, res) {
     var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     log(`GET ${req.url} :: [${ip}]`)
     if (process.env.ENV == "PROD" && !req.headers['pleaseplease']) {res.status(401).send({msg:"nope"}); return}
-    if (!req.query.ip) {res.status(422).send({msg:"no 'ip' provided"}); return}
 
     try {
-        let ip_data = getGeo(req.query.ip)
+        if (req.query.ip) {
+          ip = req.query.ip;
+        }
+        let ip_data = getGeo(ip)
         res.status(200).send(ip_data)
     } catch (err) {
         res.status(500).send({error: err.message})
