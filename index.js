@@ -1,9 +1,11 @@
 const jGeoIP = require('jgeoip');
 const express = require('express')
 const fs = require('fs')
+const cors = require('cors')
 
 require('dotenv').config()
 const app = express()
+app.use(cors())
 
 var geoip = new jGeoIP('dbip-city.mmdb');
 var asnip = new jGeoIP('dbip-asn.mmdb');
