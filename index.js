@@ -5,7 +5,7 @@ const cors = require('cors')
 
 require('dotenv').config()
 const app = express()
-app.use(cors())
+app.use(cors({origin:"mikeymon.netlify.app"}))
 
 var geoip = new jGeoIP('dbip-city.mmdb');
 var asnip = new jGeoIP('dbip-asn.mmdb');
