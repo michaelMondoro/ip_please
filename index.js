@@ -1,14 +1,16 @@
 const jGeoIP = require('jgeoip');
 const express = require('express')
 const fs = require('fs')
+const https = require('https')
 const cors = require('cors')
 
 require('dotenv').config()
-const app = express()
-app.use(cors({origin:"mikeymon.netlify.app"}))
 
-var geoip = new jGeoIP('dbip-city.mmdb');
-var asnip = new jGeoIP('dbip-asn.mmdb');
+const app = express()
+app.use(cors({origin:"*"}))
+
+var geoip = new jGeoIP(process.env.IP_DB_FILENAME);
+var asnip = new jGeoIP(process.env.ASN_DB_FILENAME);
 
 function log(msg) {
     console.log(`[ ${new Date().toLocaleString()} ] - ${msg}`)
@@ -31,6 +33,7 @@ function getGeo(ip) {
     let asn_data = getAsn(ip);
     if (record !== null) {
         data = {
+	    'ip':ip,
             'city': record['city']['names']['en'],
             'country': record['country']['names']['en'],
             'country_code': record['country']['iso_code'],
@@ -44,7 +47,6 @@ function getGeo(ip) {
 app.get('/api/ip_please', function (req, res) {
     var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     log(`GET ${req.url} :: [${ip}]`)
-    if (process.env.ENV == "PROD" && !req.headers['pleaseplease']) {res.status(401).send({msg:"nope"}); return}
 
     try {
         if (req.query.ip) {
@@ -57,9 +59,26 @@ app.get('/api/ip_please', function (req, res) {
         log(`ERROR :: ${err.message}`)
     }  
 })
-var server = app.listen(5000, function () {
-    fs.writeFileSync('ip.log','[ Starting IP API ]\n')
-    console.log("Express App running at http://127.0.0.1:5000/");
+
+/* Start Server */
+
+if (process.env.ENV === "PROD") {
+  const httpsServer = https.createServer({
+    key: fs.readFileSync(process.env.SSL_KEY_PATH),
+    cert: fs.readFileSync(process.env.SSL_CERT_PATH),
+  }, app);
+
+  httpsServer.listen(443, () => {
+      console.log('HTTPS Server running on port 443');
+  });  
+} else if (process.env.ENV === "DEV") {
+  var server = app.listen(5000, function () {
+    console.log('[ Starting IP API ]\n')
+    console.log("HTTP server running at http://127.0.0.1:5000/");
     console.log(`ENV: ${process.env.ENV}`)
-})
+  })
+} else {
+  console.log("check your .env file");
+}
+
 
