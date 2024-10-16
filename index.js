@@ -33,9 +33,10 @@ function getGeo(ip) {
     let asn_data = getAsn(ip);
     if (record !== null) {
         data = {
-	    'ip':ip,
+	          'ip':ip,
             'city': record['city']['names']['en'],
             'country': record['country']['names']['en'],
+            'subdivision': record['subdivisions'] ? record['subdivisions'][0]['names']['en'] : ''
             'country_code': record['country']['iso_code'],
             'coordinates': record['location'],
             'asn': asn_data
