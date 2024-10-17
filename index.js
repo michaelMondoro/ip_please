@@ -1,6 +1,7 @@
 const jGeoIP = require('jgeoip');
 const express = require('express')
 const fs = require('fs')
+const dns = require('dns')
 const https = require('https')
 const cors = require('cors')
 
@@ -15,6 +16,7 @@ var asnip = new jGeoIP(process.env.ASN_DB_FILENAME);
 function log(msg) {
     console.log(`[ ${new Date().toLocaleString()} ] - ${msg}`)
 }
+/* Lookup ASN Info for IP */
 function getAsn(ip) {
     let record = asnip.getRecord(ip);
     data = {}
@@ -27,6 +29,7 @@ function getAsn(ip) {
     return data;
 }
 
+/* Lookup GEO Info For IP */
 function getGeo(ip) {
     let record = geoip.getRecord(ip);
     data = {err:`couldn't find info on ip: ${ip}`}
@@ -45,7 +48,18 @@ function getGeo(ip) {
     return data;
 }
 
-app.get('/api/ip_please', function (req, res) {
+/* Check to see if we were passed a hostname, if so get its IP */
+function checkHost(ip) {
+  return new Promise((resolve,reject) => {
+      dns.lookup(ip, (err, addr, fam)=>{
+        if (err) return reject({message:"failed to get host info"})
+        resolve(addr);
+      })
+  })
+}
+
+/* API Endpoint */
+app.get('/api/ip_please', async function (req, res) {
     var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     log(`GET ${req.url} :: [${ip}]`)
 
@@ -53,6 +67,10 @@ app.get('/api/ip_please', function (req, res) {
         if (req.query.ip) {
           ip = req.query.ip;
         }
+
+        var hostIP = await checkHost(ip);
+        if (hostIP) ip = hostIP;
+
         let ip_data = getGeo(ip)
         res.status(200).send(ip_data)
     } catch (err) {
@@ -62,7 +80,6 @@ app.get('/api/ip_please', function (req, res) {
 })
 
 /* Start Server */
-
 if (process.env.ENV === "PROD") {
   const httpsServer = https.createServer({
     key: fs.readFileSync(process.env.SSL_KEY_PATH),
